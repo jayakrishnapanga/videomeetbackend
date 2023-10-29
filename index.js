@@ -7,8 +7,8 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
-
+require('dotenv').config();
+const port=process.env.PORT || 3000
 const { v4: uuid } = require('uuid');
 
 const bodyParser = require('body-parser');
@@ -29,10 +29,13 @@ const {connectMongoDB}=require("./connection")
 // connectMongoDB('mongodb://localhost:27017/tax').then(()=> console.log("mongodb connected")).catch(err => console.log("mongodb error",err));
 connectMongoDB('mongodb+srv://pangajayakrishna3:nhqmbaiIUfkBzfRt@cluster0.b0wyrdr.mongodb.net/?retryWrites=true&w=majority').then(()=> console.log("mongodb connected")).catch(err => console.log("mongodb error",err));
 
-app.listen(3001, () => {
-  console.log('Server is running on http://localhost:3001');
+app.listen(8080, () => {
+  console.log('Server is running on on port 8080');
 });
 
+app.get('/',(req,res)=>{
+  res.send('hello world')
+})
 
 app.use(express.urlencoded({extended:true}))
 
