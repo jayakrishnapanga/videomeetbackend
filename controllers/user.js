@@ -78,7 +78,116 @@ async function createUser(req, res) {
     }
   }
 
+
+  async function connectDatabase() {
+    try {
+      await client.connect();
+      console.log('Connected to database');
+    } catch (error) {
+      console.error('Error connecting to database:', error);
+    }
+  }
+  
+  
+  let bucket;
+  const generateSubmissionId = () => {
+    return new mongodb.ObjectId().toHexString();
+  };
+  connectDatabase().then(() => {
+    const db = client.db(dbName);
+    bucket = new GridFSBucket(db);
+  });
+  // const { MongoClient } = require('mongodb');
+const { GridFSBucket, ObjectId } = require('mongodb');
+const fs = require('fs');
+const stream = require('stream');
+const multer = require('multer');
+
+const storage = multer.memoryStorage(); // Use memory storage for handling files as Buffers
+
+const upload = multer({ storage: storage });
+
+// const mongodb = require('mongodb');
+// const uri = 'mongodb+srv://pangajayakrishna3:nhqmbaiIUfkBzfRt@cluster0.b0wyrdr.mongodb.net/?retryWrites=true&w=majority'; // Replace with your MongoDB URI
+// const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+// const dbName = 'test'; // Replace with your database name
+
+  
+  async function  handlerecords(req,res){
+
+    try {
+      const userId = req.params.userId;
+      console.log(userId);
+      console.log("records fetching is completed successfully");
+      await client.connect(); // Connect to MongoDB
+  
+      const db = client.db('test');
+      const bucket = new mongodb.GridFSBucket(db);
+      const videos = await db.collection('fs.files').find({ 'metadata.userId': userId }).toArray();
+  
+      if (!videos || videos.length === 0) {
+        return res.status(404).json({ message: 'No videos found for this user' });
+      }
+  
+      const videoDataArray = [];
+      for (const video of videos) {
+        const downloadStream = bucket.openDownloadStream(video._id);
+        const videoData = await new Promise((resolve, reject) => {
+          const chunks = [];
+          downloadStream.on('data', (chunk) => chunks.push(chunk));
+          downloadStream.on('end', () => resolve(Buffer.concat(chunks)));
+          downloadStream.on('error', reject);
+        });
+        videoDataArray.push({
+          data: videoData.toString('base64'),
+          uploadDate: video.uploadDate // Add the uploadDate
+        });
+      }
+  console.log(videoDataArray)
+      res.status(200).json(videoDataArray);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'An error occurred while retrieving the videos' });
+    }
+
+  }
+async function handleupload(req,res){
+
+  try {
+    const { userId } = req.body;
+    console.log("records fecthing is completed successfully")
+    console.log(req.body.userId)
+    console.log(userId)
+    const submissionId = generateSubmissionId(); 
+    const video = req.file;
+
+    if (!video) {
+      return res.status(400).json({ message: 'No video uploaded' });
+    }
+
+    const uploadVideo = async (file) => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = bucket.openUploadStream('recorded_video.webm', { metadata: { userId, submissionId } });
+        const bufferStream = new stream.PassThrough();
+        bufferStream.end(file.buffer);
+        bufferStream.pipe(uploadStream)
+          .on('error', reject)
+          .on('finish', resolve);
+      });
+    };
+
+    await uploadVideo(video);
+
+    res.status(200).json({ message: 'Video submitted successfully', submissionId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'An error occurred while submitting the video' });
+  } 
+
+}
   module.exports={
     createUser,
-    handleUserLogin
+    handleUserLogin,
+    handleupload,
+    handlerecords
  }
