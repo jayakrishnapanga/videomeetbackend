@@ -2,8 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 app.use(cors());
+// app.use(cors({
+//   origin:'https://riktammeets-5c61zknh9-jayakrishnapanga.vercel.app'
+// }));
+
 app.use(cors({
-  origin:'https://riktammeets-5c61zknh9-jayakrishnapanga.vercel.app'
+  origin: '*'
 }));
 
 app.use(express.json());
